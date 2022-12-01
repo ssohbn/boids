@@ -8,6 +8,14 @@ from math import radians, degrees, sin, cos, atan, sqrt
 from random import randint
 from numpy import mean
 
+def angle_move_thing(position: tuple[int, int], direction: int, amount: int) -> tuple[float, float]:
+    x,y = position
+    r_direction = radians(direction)
+
+    x = x + (cos(r_direction) * amount)
+    y = y - (sin(r_direction) * amount)
+    return (x, y)
+
 class Boid:
     def __init__(self, direction: int, position: tuple[int, int], speed: int):
         self.direction: int = direction
@@ -19,15 +27,8 @@ class Boid:
 
 
     def move(self):
-        x,y = self.position
-
-        direction = radians(self.direction)
-
-        x = x + (cos(direction) * self.speed)
-        y = y - (sin(direction) * self.speed)
-
-        self.position = (int(x), int(y)) # this cast may be very annoying in the future
-
+        x, y = angle_move_thing(self.position, self.direction, self.speed)
+        self.position = int(x), int(y)
 
 def pt_to_pt_angle_deg(a: tuple[int, int], b: tuple[int, int]) -> int:
     ax, ay = a
@@ -100,7 +101,7 @@ fpsClock = pygame.time.Clock()
 width, height = 1000, 1000
 screen = pygame.display.set_mode((width, height))
 
-boids = make_some_boids(100, (width, height), 10)
+boids = make_some_boids(3, (width, height), 10)
 
 # Game loop.
 while True:
@@ -113,12 +114,16 @@ while True:
 
     # Update.
     for boid in boids:
+        keys = pygame.key.get_pressed()
+        if not keys[pygame.K_SPACE]:
+            break
+
         boid.move()
 
         avg_rotation, avg_position = average_boid_stuff(boids)
 
         TEST_POS = (300, 300) # replace with avg pos later
-        avg_position = TEST_POS
+        #avg_position = TEST_POS
 
         #to_center = pt_to_pt_angle_deg(avg_position, boid.position)
         to_center = pt_to_pt_angle_deg(boid.position, avg_position)
@@ -127,21 +132,29 @@ while True:
         dist = distance(boid.position, avg_position)
 
         # boid likes moving straight.
-        #keep_direction = 1000 / dist
         # boid likes partners
-        to_center_weight = 1 * dist # the farther the fish are, the more they wanna go to the center
-        # boid dislikes crowd
-        change_rotation_weight = 1 / dist + .7
-        # boid dislikes wall
-        #weights = sum([keep_direction, to_center_weight, change_rotation_weight])
+        
+        CROWD_DISTANCE = 5
+        to_center_weight = dist%CROWD_DISTANCE/CROWD_DISTANCE# the farther the fish are, the more they wanna go to the center
 
-        print(dist, change_rotation_weight)
+        # boid dislikes crowd
+        to_average_weight = 1 - to_center_weight
+        # boid dislikes wall
+        #keep_direction_weight = 1 - ( to_center_weight + to_average_weight)
+        #weights = sum([keep_direction, to_center_weight, change_rotation_weight])
 
         new_rotation = int(
                 #mean([boid.direction * keep_direction, avg_rotation * change_rotation_weight, to_center * to_center_weight]) / weights
-                mean([avg_rotation * change_rotation_weight, to_center * to_center_weight]) / sum([to_center_weight, change_rotation_weight])
+                #mean([avg_rotation * to_average_weight, to_center * to_center_weight])
+                mean([avg_rotation, to_center])
                 #to_center * to_center_weight / to_center_weight
         )
+
+        print(to_center_weight, to_average_weight)
+        print(avg_rotation, to_center)
+        print(mean([avg_rotation, to_center]))
+        print(new_rotation)
+        print("------")
 
         boid.rotate(new_rotation) # use new_rotation once weights arent.. zero..
 
