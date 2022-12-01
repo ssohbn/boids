@@ -1,11 +1,9 @@
 import sys
 import pygame
 from math import radians, degrees, sin, cos, atan, sqrt
+from random import randint
 from numpy import mean
 
-<<<<<<< HEAD
-from stuff import *
-=======
 def angle_move_thing(position: tuple[int, int], direction: int, amount: int) -> tuple[float, float]:
     x,y = position
     r_direction = radians(direction)
@@ -92,7 +90,6 @@ def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int], int]:
 
     return int(mean(rotations)), (int(mean(xs)), int(mean(ys))), int(mean(speeds))
 
->>>>>>> parent of d94aa00 (wawawawawa)
 
 pygame.init()
 
