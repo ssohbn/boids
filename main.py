@@ -64,7 +64,7 @@ def pt_to_pt_angle_deg(a: tuple[int, int], b: tuple[int, int]) -> int:
                 return 90-int(abs(degrees(atan(dy/dx)))) + (90 * q)
 
     except ZeroDivisionError:
-        return 0
+        return 0 # tbh i feel like 90 or -90 degrees is more valid but i dont particularly care
 
 def distance(a: tuple[int, int], b: tuple[int, int]) -> int:
     ax, ay = a
