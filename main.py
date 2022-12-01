@@ -15,57 +15,19 @@ class Boid:
         self.speed: int = speed
 
     def rotate(self, direction: int):
-        dd = direction - self.direction 
-
-        negative = False
-        if dd < 0:
-            negative = True
-
-        if abs(dd) > 30: # clamp it? maybe smoother boid?
-            dd = 30
-
-        if negative:
-            dd *= -1
-
-        self.direction += dd
+        self.direction = direction
 
 
     def move(self):
         x,y = self.position
+
         direction = radians(self.direction)
+
         x = x + (cos(direction) * self.speed)
-        y = y - (sin(direction) * self.speed) # - moves down
+        y = y - (sin(direction) * self.speed)
+
         self.position = (int(x), int(y)) # this cast may be very annoying in the future
 
-def make_some_boids(amount: int, grid_dimensions: tuple[int, int], speed: int) -> list[Boid]:
-    boids = []
-    for _ in range(amount):
-        boids.append(Boid(randint(-180, 180), (randint(0, grid_dimensions[0]), randint(0, grid_dimensions[1])), speed))
-
-    return boids
-
-def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int]]:
-    rotations = []
-    xs = []
-    ys = []
-    for boid in boids:
-        rotations.append(boid.direction)
-        xs.append(boid.position[0])
-        ys.append(boid.position[1])
-
-    return int(mean(rotations)), (int(mean(xs)), int(mean(ys)))
-
-
-pygame.init()
- 
-fps = 60
-fpsClock = pygame.time.Clock()
- 
-width, height = 1000, 1000
-screen = pygame.display.set_mode((width, height))
-
-boids = make_some_boids(100, (width, height), 10)
- 
 
 def pt_to_pt_angle_deg(a: tuple[int, int], b: tuple[int, int]) -> int:
     ax, ay = a
@@ -111,10 +73,39 @@ def distance(a: tuple[int, int], b: tuple[int, int]) -> int:
     dy = by - ay
     return int(sqrt(dx ** 2 + dy ** 2))
 
+def make_some_boids(amount: int, grid_dimensions: tuple[int, int], speed: int) -> list[Boid]:
+    boids = []
+    for _ in range(amount):
+        boids.append(Boid(randint(-180, 180), (randint(0, grid_dimensions[0]), randint(0, grid_dimensions[1])), speed))
+
+    return boids
+
+def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int]]:
+    rotations = []
+    xs = []
+    ys = []
+    for boid in boids:
+        rotations.append(boid.direction)
+        xs.append(boid.position[0])
+        ys.append(boid.position[1])
+
+    return int(mean(rotations)), (int(mean(xs)), int(mean(ys)))
+
+
+pygame.init()
+
+fps = 60
+fpsClock = pygame.time.Clock()
+
+width, height = 1000, 1000
+screen = pygame.display.set_mode((width, height))
+
+boids = make_some_boids(100, (width, height), 10)
+
 # Game loop.
 while True:
     screen.fill((255,255,255))
-  
+ 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -125,37 +116,35 @@ while True:
         boid.move()
 
         avg_rotation, avg_position = average_boid_stuff(boids)
-        bx, by = boid.position
-        ax, ay = avg_position
 
+        TEST_POS = (300, 300) # replace with avg pos later
+        avg_position = TEST_POS
+
+        #to_center = pt_to_pt_angle_deg(avg_position, boid.position)
         to_center = pt_to_pt_angle_deg(boid.position, avg_position)
+        pygame.draw.line(screen, (0, 255, 0), avg_position, (boid.position))
 
-        #print(pt_to_pt_angle_deg((100, 100), pygame.mouse.get_pos()))
-
-        dpos = distance(boid.position, avg_position)
-        crowded = False
-        if dpos < 50:
-            crowded = True
-            print("crowded")
-
+        dist = distance(boid.position, avg_position)
 
         # boid likes moving straight.
+        #keep_direction = 1000 / dist
         # boid likes partners
+        to_center_weight = 1 * dist # the farther the fish are, the more they wanna go to the center
         # boid dislikes crowd
+        change_rotation_weight = 1 / dist + .7
         # boid dislikes wall
+        #weights = sum([keep_direction, to_center_weight, change_rotation_weight])
 
-        if crowded:
-            dtc = to_center - boid.direction
-            if dtc > 0:
-                new_rotation = boid.direction + 30
-            else:
-                new_rotation = boid.direction - 30
+        print(dist, change_rotation_weight)
 
-        else:
-            new_rotation = int(mean([avg_rotation, to_center]))
+        new_rotation = int(
+                #mean([boid.direction * keep_direction, avg_rotation * change_rotation_weight, to_center * to_center_weight]) / weights
+                mean([avg_rotation * change_rotation_weight, to_center * to_center_weight]) / sum([to_center_weight, change_rotation_weight])
+                #to_center * to_center_weight / to_center_weight
+        )
 
-        boid.rotate(new_rotation)
-      
+        boid.rotate(new_rotation) # use new_rotation once weights arent.. zero..
+
     # Draw.
     for boid in boids:
         pygame.draw.rect(screen, (255,0,0), pygame.Rect(boid.position[0], boid.position[1], 10, 10))
