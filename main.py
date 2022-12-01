@@ -81,16 +81,18 @@ def make_some_boids(amount: int, grid_dimensions: tuple[int, int], speed: int) -
 
     return boids
 
-def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int]]:
+def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int], int]:
     rotations = []
+    speeds = []
     xs = []
     ys = []
     for boid in boids:
         rotations.append(boid.direction)
         xs.append(boid.position[0])
         ys.append(boid.position[1])
+        speeds.append(boid.speed)
 
-    return int(mean(rotations)), (int(mean(xs)), int(mean(ys)))
+    return int(mean(rotations)), (int(mean(xs)), int(mean(ys))), int(mean(speeds))
 
 
 pygame.init()
@@ -120,43 +122,35 @@ while True:
 
         boid.move()
 
-        avg_rotation, avg_position = average_boid_stuff(boids)
+        avg_rotation, avg_position, avg_speed = average_boid_stuff(boids)
 
         TEST_POS = (300, 300) # replace with avg pos later
-        #avg_position = TEST_POS
+        avg_position = TEST_POS
 
-        #to_center = pt_to_pt_angle_deg(avg_position, boid.position)
-        to_center = pt_to_pt_angle_deg(boid.position, avg_position)
-        pygame.draw.line(screen, (0, 255, 0), avg_position, (boid.position))
+        avg_boid_goal = angle_move_thing(avg_position, avg_rotation, avg_speed)
 
         dist = distance(boid.position, avg_position)
-
-        # boid likes moving straight.
-        # boid likes partners
-        
         CROWD_DISTANCE = 5
         to_center_weight = dist%CROWD_DISTANCE/CROWD_DISTANCE# the farther the fish are, the more they wanna go to the center
-
-        # boid dislikes crowd
         to_average_weight = 1 - to_center_weight
-        # boid dislikes wall
-        #keep_direction_weight = 1 - ( to_center_weight + to_average_weight)
-        #weights = sum([keep_direction, to_center_weight, change_rotation_weight])
 
-        new_rotation = int(
-                #mean([boid.direction * keep_direction, avg_rotation * change_rotation_weight, to_center * to_center_weight]) / weights
-                #mean([avg_rotation * to_average_weight, to_center * to_center_weight])
-                mean([avg_rotation, to_center])
-                #to_center * to_center_weight / to_center_weight
-        )
 
-        print(to_center_weight, to_average_weight)
-        print(avg_rotation, to_center)
-        print(mean([avg_rotation, to_center]))
-        print(new_rotation)
-        print("------")
+        # weights die
+        # evil.
+        goal_x = int(mean([avg_boid_goal[0] * to_average_weight, avg_position[0] * to_center_weight])) 
+        goal_y = int(mean([avg_boid_goal[1] * to_average_weight, avg_position[1] * to_center_weight]))
+        goal_position = goal_x, goal_y
 
+        new_rotation = pt_to_pt_angle_deg(boid.position, goal_position)
+
+        pygame.draw.line(screen, (0, 255, 0), avg_position, (boid.position))
+        pygame.draw.line(screen, (0, 0, 255), avg_boid_goal, (boid.position))
+        pygame.draw.line(screen, (255, 0, 0), goal_position, (boid.position))
+        #pygame.draw.rect(screen, (0, 0, 255), (avg_position[0], avg_position[1], 10, 10))
         boid.rotate(new_rotation) # use new_rotation once weights arent.. zero..
+
+        print(avg_position, avg_boid_goal, goal_position)
+
 
     # Draw.
     for boid in boids:
