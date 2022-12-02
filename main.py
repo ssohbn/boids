@@ -3,6 +3,7 @@ import pygame
 from math import radians, degrees, sin, cos, atan, sqrt
 from random import randint
 from numpy import mean
+from pygame.event import wait
 
 def angle_move_thing(position: tuple[int, int], direction: int, amount: int) -> tuple[float, float]:
     x,y = position
@@ -70,14 +71,19 @@ def distance(a: tuple[int, int], b: tuple[int, int]) -> int:
     dy = by - ay
     return int(sqrt(dx ** 2 + dy ** 2))
 
-def make_some_boids(amount: int, grid_dimensions: tuple[int, int], speed: int) -> list[Boid]:
+def make_some_boids(amount: int, grid_dimensions: tuple[int, int], speed: int = 5, randomize_speed: bool = False) -> list[Boid]:
     boids = []
-    for _ in range(amount):
-        boids.append(Boid(randint(-180, 180), (randint(0, grid_dimensions[0]), randint(0, grid_dimensions[1])), speed))
+
+    if randomize_speed:
+        for _ in range(amount):
+            boids.append(Boid(randint(0, 360), (randint(0, grid_dimensions[0]), randint(0, grid_dimensions[1])), randint(3, speed)))
+    else:
+        for _ in range(amount):
+            boids.append(Boid(randint(0, 360), (randint(0, grid_dimensions[0]), randint(0, grid_dimensions[1])), speed))
 
     return boids
 
-def average_boid_stuff(boids: list[Boid]) -> tuple[tuple[int, int], tuple[int, int], int]:
+def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int], int]:
     speeds = []
 
     xs = []
@@ -92,10 +98,17 @@ def average_boid_stuff(boids: list[Boid]) -> tuple[tuple[int, int], tuple[int, i
         speeds.append(boid.speed)
 
         gx, gy = angle_move_thing(boid.position, boid.direction, boid.speed)
-        gxs.append(gx)
-        gys.append(gy)
-    
-    return (int(mean(gxs)), int(mean(gys))), (int(mean(xs)), int(mean(ys))), int(mean(speeds))
+        gxs.append(gx - boid.position[0]) # getting offset from zero by subtracting original thing?
+        gys.append(gy - boid.position[1]) # i dont know vector math so i dont know if this will affect the angle but surely it cant harm it
+
+    print(gxs, gys)
+
+    avg_rotation = pt_to_pt_angle_deg((0,0), (int(mean(gxs)), int(mean(gys))))
+
+    avg_position = (int(mean(xs)), int(mean(ys)))
+    avg_speed = int(mean(speeds))
+
+    return avg_rotation, avg_position, avg_speed
 
 pygame.init()
 
@@ -108,7 +121,8 @@ font = pygame.font.SysFont(default_font_name, 24)
 width, height = 1000, 1000
 screen = pygame.display.set_mode((width, height))
 
-boids = make_some_boids(3, (width, height), 10)
+BOID_COUNT = 100
+boids = make_some_boids(100, (width, height), randomize_speed=True, speed = 10)
 
 # Game loop.
 while True:
@@ -120,22 +134,23 @@ while True:
             sys.exit()
 
     # Update.
-    avg_goal, avg_position, avg_speed = average_boid_stuff(boids)
+    avg_direction, avg_position, avg_speed = average_boid_stuff(boids)
     TEST_POS = (300, 300) # replace with avg pos later
-    avg_position = TEST_POS
+    #avg_position = TEST_POS
 
     for boid in boids:
-        keys = pygame.key.get_pressed()
-        if not keys[pygame.K_SPACE]:
-            break
+        avg_goal = angle_move_thing(boid.position, avg_direction, boid.speed)
 
-        #to_center_weight =  dist / CROWD_DISTANCE# the farther the fish are, the more they wanna go to the center
-        #to_center_weight = .5
-        #to_heading_weight= 1 - to_center_weight
+        dist = distance(boid.position, avg_position)
+        CROWD_DISTANCE = 50
 
-        to_center_weight = .5
-        to_heading_weight= .5
+        to_center_weight = dist/ CROWD_DISTANCE % CROWD_DISTANCE
+        to_heading_weight= 1 - to_center_weight
+
+
         weights = to_center_weight + to_heading_weight
+        print(to_center_weight)
+        dist = distance(boid.position, avg_position)
 
         # weights die
         # evil.
@@ -150,8 +165,10 @@ while True:
         pygame.draw.line(screen, (255, 0, 0), goal_position, boid.position)
 
         boid.rotate(new_rotation) # use new_rotation once weights arent.. zero..
-        boid.move()
 
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_SPACE]:
+            boid.move()
 
     # Draw.
     for boid in boids:
