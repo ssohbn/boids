@@ -3,7 +3,6 @@ import pygame
 from math import radians, degrees, sin, cos, atan, sqrt
 from random import randint
 from numpy import mean
-from pygame.event import wait
 
 def angle_move_thing(position: tuple[int, int], direction: int, amount: int) -> tuple[float, float]:
     x,y = position
@@ -101,7 +100,6 @@ def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int], int]:
         gxs.append(gx - boid.position[0]) # getting offset from zero by subtracting original thing?
         gys.append(gy - boid.position[1]) # i dont know vector math so i dont know if this will affect the angle but surely it cant harm it
 
-    print(gxs, gys)
 
     avg_rotation = pt_to_pt_angle_deg((0,0), (int(mean(gxs)), int(mean(gys))))
 
@@ -109,6 +107,14 @@ def average_boid_stuff(boids: list[Boid]) -> tuple[int, tuple[int, int], int]:
     avg_speed = int(mean(speeds))
 
     return avg_rotation, avg_position, avg_speed
+
+def bounded(x: int, lower_bound: int, upper_bound: int) -> int:
+    if x < lower_bound:
+        x = lower_bound
+    if x > upper_bound:
+        x = upper_bound
+
+    return x
 
 pygame.init()
 
@@ -135,27 +141,40 @@ while True:
 
     # Update.
     avg_direction, avg_position, avg_speed = average_boid_stuff(boids)
-    TEST_POS = (300, 300) # replace with avg pos later
-    #avg_position = TEST_POS
+    #avg_position = (300, 300)
 
     for boid in boids:
         avg_goal = angle_move_thing(boid.position, avg_direction, boid.speed)
 
         dist = distance(boid.position, avg_position)
         CROWD_DISTANCE = 50
+        AVOID_DISTANCE = 5
 
-        to_center_weight = dist/ CROWD_DISTANCE % CROWD_DISTANCE
-        to_heading_weight= 1 - to_center_weight
+        to_center_weight = .2 #dist / CROWD_DISTANCE % CROWD_DISTANCE
+        avoid_weight = 1 #dist / AVOID_DISTANCE % AVOID_DISTANCE
+        keep_moving_weight = 1 #1
+        to_heading_weight= 1 #1 - to_center_weight
+        wiggle_weight = 1
+
+        weights = to_center_weight + to_heading_weight + avoid_weight + keep_moving_weight + wiggle_weight
+        print(weights)
 
 
-        weights = to_center_weight + to_heading_weight
-        print(to_center_weight)
-        dist = distance(boid.position, avg_position)
+        goal_x = int(sum([
+            avg_goal[0] * to_heading_weight,
+            avg_position[0] * to_center_weight,
+            boid.direction * keep_moving_weight,
+            (boid.direction+180) * avoid_weight,
+            boid.direction + randint(-180, 180) * wiggle_weight,
+        ])/weights)
 
-        # weights die
-        # evil.
-        goal_x = int(sum([avg_goal[0] * to_heading_weight, avg_position[0] * to_center_weight])/weights)
-        goal_y = int(sum([avg_goal[1] * to_heading_weight, avg_position[1] * to_center_weight])/weights)
+        goal_y = int(sum([avg_goal[1] * to_heading_weight,
+            avg_position[1] * to_center_weight,
+            boid.direction * keep_moving_weight,
+            (boid.direction+180) * avoid_weight,
+            boid.direction + randint(-180, 180) * wiggle_weight,
+        ])/weights)
+
         goal_position = goal_x, goal_y
 
         new_rotation = pt_to_pt_angle_deg(boid.position, goal_position)
@@ -175,7 +194,6 @@ while True:
         pygame.draw.rect(screen, (255,0,0), pygame.Rect(boid.position[0], boid.position[1], 10, 10))
         pygame.draw.line(screen, (0, 0, 0), angle_move_thing(boid.position, boid.direction, 50), boid.position)
         screen.blit(font.render(f"avg_position: {avg_position}", False, (0, 0, 0)), avg_position)
-        screen.blit(font.render(f"avg_goal: {avg_goal}", False, (0, 0, 0)), avg_goal)
 
     pygame.display.flip()
     fpsClock.tick(fps)
