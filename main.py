@@ -84,7 +84,7 @@ while True:
     for boid in boids:
 
         close_boids = list(filter(lambda b: boid_distance(boid, b) <= 100 and b != boid, boids))
-        close_birds_count = len(close_boids)
+        close_boids_count = len(close_boids)
 
         avg_pos, avg_velocity = avg_boid_stuff(close_boids) # terrifying
 
@@ -111,7 +111,7 @@ while True:
         elif boid.position[1] > height:
             wall_stuff += array([boid.position[0], height]) - boid.position
 
-        if close_birds_count:
+        if close_boids_count:
             boid.add_velocity(to_center)
             boid.add_velocity(to_avg_velocity)
         boid.add_velocity(to_mouse)
