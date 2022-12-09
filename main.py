@@ -69,7 +69,7 @@ font = pygame.font.SysFont(default_font_name, 24)
 width, height = 1000, 1000
 screen = pygame.display.set_mode((width, height))
 
-boids: list[Boid] = make_boids(100)
+boids: list[Boid] = make_boids(50)
 
 # Game loop.
 while True:
