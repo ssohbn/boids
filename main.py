@@ -8,19 +8,21 @@ from numpy import array, mean, ndarray, zeros
 class Boid:
     def __init__(self, position: ndarray):
         self.position: ndarray = position
-        self.velocity: ndarray = array([randint(-1, 1), randint(-1, 1)])
+        self.velocity: ndarray = array([randint(-2, 2), randint(-2, 2)])
 
     def add_velocity(self, velocity: ndarray):
-        self.velocity = self.velocity + velocity
-        if self.velocity[0] > 5:
-            self.velocity[0] = 5
-        if self.velocity[0] < -5:
-            self.velocity[0] = -5
+        CAP = 5
 
-        if self.velocity[1] > 5:
-            self.velocity[1] = 5
-        if self.velocity[1] < -5:
-            self.velocity[1] = -5
+        self.velocity = self.velocity + velocity
+        if self.velocity[0] > CAP:
+            self.velocity[0] = CAP
+        elif self.velocity[0] < -CAP:
+            self.velocity[0] = -CAP
+
+        if self.velocity[1] > CAP:
+            self.velocity[1] = CAP
+        elif self.velocity[1] < -CAP:
+            self.velocity[1] = -CAP
 
     def move(self):
         self.position = self.position + self.velocity
@@ -95,17 +97,33 @@ while True:
     # Update.
     for boid in boids:
 
-        close_boids = list(filter(lambda b: boid_distance(boid, b) <= 50, boids))
+        close_boids = list(filter(lambda b: boid_distance(boid, b) <= 100 and b != boid, boids))
+        close_birds_count = len(close_boids)
 
-        avg_pos, avg_velocity = avg_boid_stuff(close_boids) 
+        avg_pos, avg_velocity = avg_boid_stuff(close_boids)
 
-        to_center = (avg_pos - boid.position) / 100
-        to_avg_velocity = (boid.velocity - avg_velocity) / 8
-        away = away_from_boids(boid, boids, 2)
+        to_center = (avg_pos - boid.position) / 1000
+        to_avg_velocity = (avg_velocity - boid.velocity) / 10
+        away = away_from_boids(boid, boids, 20) / 100
 
-        boid.add_velocity(to_center)
-        boid.add_velocity(to_avg_velocity)
+        wall_stuff = zeros(2)
+        if boid.position[0] < 0:
+            wall_stuff += array([0, boid.position[1]]) - boid.position
+        elif boid.position[0] > width:
+            wall_stuff += array([width, boid.position[1]]) - boid.position
+
+        if boid.position[1] < 0:
+            wall_stuff += array([boid.position[0], 0]) - boid.position
+        elif boid.position[1] > height:
+            wall_stuff += array([boid.position[0], height]) - boid.position
+
+
+
+        if close_birds_count:
+            boid.add_velocity(to_center)
+            boid.add_velocity(to_avg_velocity)
         boid.add_velocity(away)
+        boid.add_velocity(wall_stuff)
 
         next_pos = boid.position + boid.velocity * 10
 
@@ -117,7 +135,6 @@ while True:
     # Draw.
     for boid in boids:
         pygame.draw.rect(screen, (255,0,0), pygame.Rect(boid.position[0], boid.position[1], 10, 10))
-        pygame.draw.line(screen, (0, 0, 255), (boid.position[0], boid.position[1]), (avg_pos[0], avg_pos[1]))
 
     pygame.display.flip()
     fpsClock.tick(fps)
