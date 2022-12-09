@@ -38,26 +38,13 @@ def avg_boid_stuff(boids: list[Boid]) -> tuple[ndarray, ndarray]:
     '''
     returns tuple of avg_position and avg_velocity
     '''
-    xs = []
-    ys = []
+    positions = list(map(lambda boid: boid.position, boids))
+    avg_position = sum(positions) / len(positions) if len(positions) != 0 else zeros(2)
 
-    dxs = []
-    dys = []
+    velocities = list(map(lambda boid: boid.velocity, boids))
+    avg_velocity = sum(velocities) / len(velocities) if len(velocities) != 0 else zeros(2)
 
-    for boid in boids:
-        xs.append(boid.position[0])
-        ys.append(boid.position[1])
-
-        dxs.append(boid.velocity[0])
-        dys.append(boid.velocity[1])
-
-    x = mean(xs)
-    y = mean(ys)
-
-    dx = mean(dxs)
-    dy = mean(dys)
-
-    return array([x, y]), array([dx, dy])
+    return avg_position, avg_velocity
 
 def away_from_boids(boid: Boid, boids: list[Boid], distance: int):
     c = numpy.zeros(2)
@@ -82,7 +69,7 @@ font = pygame.font.SysFont(default_font_name, 24)
 width, height = 1000, 1000
 screen = pygame.display.set_mode((width, height))
 
-boids: list[Boid] = make_boids(50)
+boids: list[Boid] = make_boids(100)
 
 # Game loop.
 while True:
