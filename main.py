@@ -11,7 +11,7 @@ class Boid:
         self.velocity: ndarray = array([randint(-2, 2), randint(-2, 2)])
 
     def add_velocity(self, velocity: ndarray):
-        CAP = 5
+        CAP = 50
 
         self.velocity = self.velocity + velocity
         if self.velocity[0] > CAP:
@@ -93,20 +93,27 @@ while True:
             pygame.quit()
             sys.exit()
 
-
     # Update.
     for boid in boids:
 
         close_boids = list(filter(lambda b: boid_distance(boid, b) <= 100 and b != boid, boids))
         close_birds_count = len(close_boids)
 
-        avg_pos, avg_velocity = avg_boid_stuff(close_boids)
+        avg_pos, avg_velocity = avg_boid_stuff(close_boids) # terrifying
 
         to_center = (avg_pos - boid.position) / 1000
         to_avg_velocity = (avg_velocity - boid.velocity) / 10
         away = away_from_boids(boid, boids, 20) / 100
 
+        to_mouse = zeros(2)
+        pressed = pygame.mouse.get_pressed()
+        if any(pressed):
+            to_mouse = (array(pygame.mouse.get_pos()) - boid.position) / 1000
+            if pressed[2]:
+                to_mouse *= -10
+
         wall_stuff = zeros(2)
+        DISTANS = 10
         if boid.position[0] < 0:
             wall_stuff += array([0, boid.position[1]]) - boid.position
         elif boid.position[0] > width:
@@ -117,11 +124,10 @@ while True:
         elif boid.position[1] > height:
             wall_stuff += array([boid.position[0], height]) - boid.position
 
-
-
         if close_birds_count:
             boid.add_velocity(to_center)
             boid.add_velocity(to_avg_velocity)
+        boid.add_velocity(to_mouse)
         boid.add_velocity(away)
         boid.add_velocity(wall_stuff)
 
