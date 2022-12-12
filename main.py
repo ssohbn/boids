@@ -1,9 +1,8 @@
-from os import wait
 import sys
 import pygame
 from random import randint
 import numpy
-from numpy import array, mean, ndarray, zeros
+from numpy import array, ndarray, zeros
 
 class Boid:
     def __init__(self, position: ndarray, cap):
@@ -44,7 +43,7 @@ def avg_boid_stuff(boids: list[Boid]) -> tuple[ndarray, ndarray]:
     velocities = list(map(lambda boid: boid.velocity, boids))
     avg_velocity = sum(velocities) / len(velocities) if len(velocities) != 0 else zeros(2)
 
-    return avg_position, avg_velocity
+    return (avg_position, avg_velocity)
 
 def boid_distance(a: Boid, b: Boid):
     # euclidian distance is named weird in numpy
@@ -64,6 +63,10 @@ def away_from_boids(boid: Boid, boids: list[Boid], distance: int):
 
     return c
 
+def distance_squared(a: ndarray, b: ndarray):
+    c = b-a
+    d = c[0]**2 + c[1]**2
+    return d
 
 pygame.init()
 fps = 60
@@ -75,7 +78,7 @@ font = pygame.font.SysFont(default_font_name, 24)
 width, height = 1000, 1000
 screen = pygame.display.set_mode((width, height))
 
-boids: list[Boid] = make_boids(100)
+boids: list[Boid] = make_boids(50)
 
 # Game loop.
 while True:
@@ -112,13 +115,17 @@ while True:
 
         to_mouse = zeros(2)
         pressed = pygame.mouse.get_pressed()
-        if any(pressed):
-            to_mouse = (array(pygame.mouse.get_pos()) - boid.position) / 1000
-            if pressed[2]:
+        mouse_pos = pygame.mouse.get_pos()
+
+        to_mouse = (array(pygame.mouse.get_pos()) - boid.position) / 1000
+        if pressed[0] and distance_squared(boid.position, array(mouse_pos)) <= 50**2:
                 to_mouse *= -10
 
+        elif not pressed[2]:
+            to_mouse = (0, 0)
+
+
         wall_stuff = zeros(2)
-        DISTANS = 10
         if boid.position[0] < 0:
             wall_stuff += array([0, boid.position[1]]) - boid.position
         elif boid.position[0] > width:
@@ -136,16 +143,18 @@ while True:
         boid.add_velocity(away)
         boid.add_velocity(wall_stuff)
 
-        next_pos = boid.position + boid.velocity * 10
+        heading_arrow = boid.position + boid.velocity * 10
 
-        pygame.draw.line(screen, (0, 255, 0), (boid.position[0], boid.position[1]), (next_pos[0], next_pos[1]))
+        pygame.draw.line(screen, (0, 255, 0), (boid.position[0], boid.position[1]), (heading_arrow[0], heading_arrow[1]))
 
         boid.move()
-
 
     # Draw.
     for boid in boids:
         pygame.draw.rect(screen, (255,0,0), pygame.Rect(boid.position[0], boid.position[1], 10, 10))
 
+    text = font.render(f"fps: {fpsClock.get_fps()}", False, (0,0,0))
+    screen.blit(text, (0, 0))
+    
     pygame.display.flip()
     fpsClock.tick(fps)
