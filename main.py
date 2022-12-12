@@ -6,31 +6,31 @@ import numpy
 from numpy import array, mean, ndarray, zeros
 
 class Boid:
-    def __init__(self, position: ndarray):
+    def __init__(self, position: ndarray, cap):
         self.position: ndarray = position
         self.velocity: ndarray = array([randint(-2, 2), randint(-2, 2)])
+        self.cap: int = cap
 
     def add_velocity(self, velocity: ndarray):
-        CAP = 50
 
         self.velocity = self.velocity + velocity
-        if self.velocity[0] > CAP:
-            self.velocity[0] = CAP
-        elif self.velocity[0] < -CAP:
-            self.velocity[0] = -CAP
+        if self.velocity[0] > self.cap:
+            self.velocity[0] = self.cap
+        elif self.velocity[0] < -self.cap:
+            self.velocity[0] = -self.cap
 
-        if self.velocity[1] > CAP:
-            self.velocity[1] = CAP
-        elif self.velocity[1] < -CAP:
-            self.velocity[1] = -CAP
+        if self.velocity[1] > self.cap:
+            self.velocity[1] = self.cap
+        elif self.velocity[1] < -self.cap:
+            self.velocity[1] = -self.cap
 
     def move(self):
         self.position = self.position + self.velocity
-        
+
 def make_boids(amount: int) -> list[Boid]:
     boids = []
     for _ in range(amount):
-        boids.append(Boid(array((randint(0, 500), randint(0, 500)))))
+        boids.append(Boid(array((randint(0, 500), randint(0, 500))), 50))
 
     return boids
 
@@ -46,18 +46,24 @@ def avg_boid_stuff(boids: list[Boid]) -> tuple[ndarray, ndarray]:
 
     return avg_position, avg_velocity
 
+def boid_distance(a: Boid, b: Boid):
+    # euclidian distance is named weird in numpy
+    return numpy.linalg.norm(a.position - b.position)
+
 def away_from_boids(boid: Boid, boids: list[Boid], distance: int):
     c = numpy.zeros(2)
     for b in boids:
 
-        if  boid_distance(boid, b)< distance:
+        #if  boid_distance(boid, b)< distance:
+
+        diff = b.position - boid.position
+
+        if diff[0] ** 2 + diff[1] ** 2 < distance ** 2:
+
             c = -(b.position - boid.position) # vector away from collision
 
     return c
 
-def boid_distance(a: Boid, b: Boid):
-    # euclidian distance is named weird in numpy
-    return numpy.linalg.norm(a.position - b.position)
 
 pygame.init()
 fps = 60
@@ -69,7 +75,7 @@ font = pygame.font.SysFont(default_font_name, 24)
 width, height = 1000, 1000
 screen = pygame.display.set_mode((width, height))
 
-boids: list[Boid] = make_boids(50)
+boids: list[Boid] = make_boids(100)
 
 # Game loop.
 while True:
@@ -83,7 +89,19 @@ while True:
     # Update.
     for boid in boids:
 
-        close_boids = list(filter(lambda b: boid_distance(boid, b) <= 100 and b != boid, boids))
+        close_boids = []
+
+        for b in boids:
+            if boid == b:
+                continue
+
+            diff = b.position - boid.position
+
+            if not diff[0] ** 2 + diff[1] ** 2 < 100 ** 2:
+                continue
+
+            close_boids.append(b)
+
         close_boids_count = len(close_boids)
 
         avg_pos, avg_velocity = avg_boid_stuff(close_boids) # terrifying
